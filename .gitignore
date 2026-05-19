@@ -1,0 +1,5 @@
+token.json
+credentials.json
+ai-os.db
+.env
+node_modules

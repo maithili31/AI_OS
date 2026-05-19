@@ -1,0 +1,9 @@
+
+
+FROM: ByteByteGo <bytebytego@substack.com>
+
+SUBJECT: How Snapchat Serves a Billion Predictions Per Second
+
+BODY:
+For Snap, machine learning is closer to the product itself than a feature on top of it. ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏
+

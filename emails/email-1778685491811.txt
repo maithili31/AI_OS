@@ -1,0 +1,9 @@
+
+
+FROM: Google <no-reply@accounts.google.com>
+
+SUBJECT: Security alert
+
+BODY:
+You allowed Desktop App access to some of your Google Account data mishra.maithili2931@gmail.com If you didn&#39;t allow Desktop App access to some of your Google Account data, someone else may be
+
