@@ -57,5 +57,15 @@ export async function initDB() {
     )
   `)
 
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS memories (
+      id TEXT PRIMARY KEY,
+      type TEXT,
+      content TEXT,   
+      metadata TEXT,   
+      created_at INTEGER
+    )
+    `);
+
   return db;
 }

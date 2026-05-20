@@ -1,54 +1,7 @@
-// import { planTask } from "../../agent/planner.ts";
-// import { sendEmailTool } from "../../tools/index.ts";
-
-// export async function planCommand(
-//   req: any,
-//   res: any
-// ) {
-
-//   const { command } =
-//     req.body;
-
-//   const result =
-//     await planTask(command);
-
-//   res.json(result);
-// }
-
-// export async function executePlannedTask(
-//     req: any,
-//     res: any
-//   ) {
-  
-//     const task =
-//       req.body;
-  
-//     if (
-//       task.intent ===
-//       "send_email"
-//     ) {
-  
-//       await sendEmailTool.execute(
-  
-//         task.recipient,
-  
-//         task.subject,
-  
-//         task.body
-//       );
-//     }
-  
-//     res.json({
-//       success: true
-//     });
-//   }
-
-import { planTask }
-from "../../agent/planner.ts";
-
-import {
-  executeTool
-} from "../../tools/executor.ts";
+import { planTask } from "../../agent/planner.ts";
+import { executeTool } from "../../tools/executor.ts";
+import { saveMemory } from "../../memory/memory.service.ts";
+import { saveVectorMemory } from "../../memory/vector-memory.service.ts";
 
 export async function planCommand(
 
@@ -117,14 +70,22 @@ export async function executePlannedTask(
     const task =
       req.body;
 
-    if (!task.intent) {
+    if (
+
+      !task.steps ||
+
+      !Array.isArray(
+        task.steps
+      )
+
+    ) {
 
       return res.status(400).json({
 
         success: false,
 
         error:
-          "Task intent missing"
+          "No execution steps found"
       });
     }
 
@@ -133,23 +94,66 @@ export async function executePlannedTask(
       task
     );
 
-    const result =
-      await executeTool(
+    const results: any[] = [];
 
-        task.intent,
+    for (
+      const step
+      of task.steps
+    ) {
 
-        task
+      console.log(
+        "EXECUTING STEP:",
+        step.intent
       );
+
+      const result =
+        await executeTool(
+
+          step.intent,
+
+          step
+        );
+
+      results.push({
+
+        intent:
+          step.intent,
+
+        result
+      });
+    }
 
     console.log(
       "TASK EXECUTED SUCCESSFULLY"
+    );
+    await saveMemory(
+
+      "task_execution",
+    
+      `Executed command:
+       ${JSON.stringify(task)}`,
+    
+      {
+        task,
+        results
+      }
+    );
+
+    await saveVectorMemory(
+
+      JSON.stringify(task),
+    
+      {
+        task,
+        results
+      }
     );
 
     res.json({
 
       success: true,
 
-      result
+      results
     });
 
   } catch (error: any) {

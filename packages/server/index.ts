@@ -4,6 +4,7 @@ import workflowRoutes from "./routes/workflow.routes.ts";
 import executionRoutes from "./routes/execution.routes.ts";
 import dlqRoutes from "./routes/dlq.routes.ts";
 import agentRoutes from "./routes/agent.routes.ts";
+import memoryRoutes from "./routes/memory.routes.ts";
 
 const app = express();
 
@@ -29,6 +30,11 @@ app.use(
 app.use(
   "/dlq",
   dlqRoutes
+);
+
+app.use(
+  "/memory",
+  memoryRoutes
 );
 
 const PORT = 3000;

@@ -1,4 +1,6 @@
-import fs from "fs/promises";
+import fs from "fs";
+
+import path from "path";
 
 import { Tool }
 from "./index.ts";
@@ -9,38 +11,68 @@ implements Tool {
   name = "save_email";
 
   description =
-    "Save recruiter email locally";
+    "Save email contents locally";
 
-  async execute(input: any) {
+  parameters = [
 
-    await fs.mkdir(
-      "./emails",
-      {
-        recursive: true
-      }
+    {
+      name: "subject",
+
+      type: "string",
+
+      description:
+        "Email subject",
+
+      required: true
+    },
+
+    {
+      name: "body",
+
+      type: "string",
+
+      description:
+        "Email body",
+
+      required: true
+    }
+  ];
+
+  async execute(
+    input: any
+  ) {
+
+    const filePath =
+      path.join(
+
+        process.cwd(),
+
+        "emails",
+
+        `email-${Date.now()}.txt`
+      );
+
+    fs.mkdirSync(
+      path.dirname(filePath),
+      { recursive: true }
     );
 
-    const filename =
-      `./emails/email-${Date.now()}.txt`;
+    fs.writeFileSync(
 
-    const content = `
+      filePath,
 
-FROM: ${input.from}
-
-SUBJECT: ${input.subject}
+      `
+SUBJECT:
+${input.subject}
 
 BODY:
 ${input.body}
-
-`;
-
-    await fs.writeFile(
-      filename,
-      content
+`
     );
 
     console.log(
-      `EMAIL SAVED:${filename}`
+      `EMAIL SAVED:
+       ${filePath}`
     );
 
     return {

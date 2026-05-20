@@ -1,4 +1,5 @@
-import { Tool } from "./index.ts";
+import { Tool }
+from "./index.ts";
 
 export class NotificationTool
 implements Tool {
@@ -6,18 +7,36 @@ implements Tool {
   name = "notify_user";
 
   description =
-    "Send desktop notification";
+    "Send a desktop notification to the user";
 
-    async execute(input: any) {
+  parameters = [
 
-      console.log(
-    
-        `NOTIFICATION: New email from ${input.from}`
-    
-      );
-    
-      return {
-        success: true
-      };
+    {
+      name: "message",
+
+      type: "string",
+
+      description:
+        "Notification message",
+
+      required: true
     }
+  ];
+
+  async execute(
+    input: any
+  ) {
+
+    console.log(
+
+      "NOTIFICATION:",
+
+      input.message ||
+      "New notification"
+    );
+
+    return {
+      success: true
+    };
+  }
 }
