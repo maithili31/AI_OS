@@ -184,63 +184,36 @@ export class FilesystemTool
     let targetPath =
       input.path;
 
-    if (
-
-      input.parameters &&
-
-      Array.isArray(
-        input.parameters
-      )
-
-    ) {
-
-      for (
-        const param
-        of input.parameters
-      ) {
-
-        if (
-          param.name ===
-          "operation"
-        ) {
-
-          operation =
-            param.value;
+    if (input.parameters && Array.isArray(input.parameters)){
+      for (const param of input.parameters){
+        if (param.name ==="operation"){
+          operation = param.value;
         }
-
-        if (
-          param.name ===
-          "path"
-        ) {
-
-          targetPath =
-            param.value;
+        if (param.name ==="path"){
+          targetPath = param.value;
         }
       }
     }
 
     if (!targetPath) {
-
-      throw new Error(
-        "Path is required"
-      );
+      throw new Error("Path is required");
     }
 
-    const resolvedPath =
-      this.resolvePath(
-        targetPath
-      );
-
+    const resolvedPath = this.resolvePath(targetPath);
     const normalizedOperation =
-
       operation
         ?.toLowerCase()
         ?.replace(/\s+/g, "_");
 
-    if (
-
+    if ( 
+      
       normalizedOperation ===
         "create_folder"
+
+      ||
+
+      normalizedOperation ===
+        "create_file"
 
       ||
 
@@ -276,14 +249,9 @@ export class FilesystemTool
     }
 
     return {
-
       success: true,
-
-      operation:
-        normalizedOperation,
-
-      path:
-        resolvedPath
+      operation:normalizedOperation,
+      path:resolvedPath
     };
   }
 }

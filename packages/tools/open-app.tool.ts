@@ -1,5 +1,353 @@
+// import { exec }
+// from "child_process";
+
+// import fs
+// from "fs";
+
+// import path
+// from "path";
+
+// import os
+// from "os";
+
+// import { Tool }
+// from "./index.ts";
+
+// export class OpenAppTool
+//   implements Tool {
+
+//   name = "open_app";
+
+//   description =
+//     "Open apps, files, or folders";
+
+//   parameters = [
+
+//     {
+//       name: "app",
+
+//       type: "string",
+
+//       description:
+//         "Application, file, or folder to open",
+
+//       required: true
+//     }
+//   ];
+
+//   resolvePath(
+//     target: string
+//   ) {
+
+//     const homeDir =
+//       os.homedir();
+
+//     const baseDir =
+
+//       fs.existsSync(
+
+//         path.join(
+//           homeDir,
+//           "OneDrive"
+//         )
+
+//       )
+
+//         ?
+
+//         path.join(
+//           homeDir,
+//           "OneDrive"
+//         )
+
+//         :
+
+//         homeDir;
+
+//     /*
+//     =========================================
+//     DESKTOP
+//     =========================================
+//     */
+
+//     if (
+//       target
+//         .toLowerCase()
+//         .includes(
+//           "desktop"
+//         )
+//     ) {
+
+//       return path.join(
+
+//         baseDir,
+
+//         "Desktop",
+
+//         target
+
+//           .replace(
+//             /desktop/gi,
+//             ""
+//           )
+
+//           .replace(
+//             /^[/\\]/,
+//             ""
+//           )
+//       );
+//     }
+
+//     /*
+//     =========================================
+//     DOCUMENTS
+//     =========================================
+//     */
+
+//     if (
+//       target
+//         .toLowerCase()
+//         .includes(
+//           "documents"
+//         )
+//     ) {
+
+//       return path.join(
+
+//         baseDir,
+
+//         "Documents",
+
+//         target
+
+//           .replace(
+//             /documents/gi,
+//             ""
+//           )
+
+//           .replace(
+//             /^[/\\]/,
+//             ""
+//           )
+//       );
+//     }
+
+//     /*
+//     =========================================
+//     DOWNLOADS
+//     =========================================
+//     */
+
+//     if (
+//       target
+//         .toLowerCase()
+//         .includes(
+//           "downloads"
+//         )
+//     ) {
+
+//       return path.join(
+
+//         baseDir,
+
+//         "Downloads",
+
+//         target
+
+//           .replace(
+//             /downloads/gi,
+//             ""
+//           )
+
+//           .replace(
+//             /^[/\\]/,
+//             ""
+//           )
+//       );
+//     }
+
+//     return target;
+//   }
+
+//   async execute(
+//     input: any
+//   ) {
+
+//     let target =
+//       input.app;
+
+//     /*
+//     =========================================
+//     PARAM EXTRACTION
+//     =========================================
+//     */
+
+//     if (
+//       input.parameters &&
+//       Array.isArray(
+//         input.parameters
+//       )
+//     ) {
+
+//       for (
+//         const param
+//         of input.parameters
+//       ) {
+
+//         if (
+//           param.name ===
+//           "app"
+//         ) {
+
+//           target =
+//             param.value;
+//         }
+//       }
+//     }
+
+//     if (!target) {
+
+//       throw new Error(
+//         "Open target missing"
+//       );
+//     }
+
+//     console.log(
+//       "OPEN TARGET:",
+//       target
+//     );
+
+//     /*
+//     =========================================
+//     FILE/FOLDER PATH
+//     =========================================
+//     */
+
+//     const resolvedPath =
+//       this.resolvePath(
+//         target
+//       );
+
+//     /*
+//     =========================================
+//     IF PATH EXISTS
+//     =========================================
+//     */
+
+//     if (
+//       fs.existsSync(
+//         resolvedPath
+//       )
+//     ) {
+
+//       console.log(
+//         "OPENING FILE/FOLDER:",
+//         resolvedPath
+//       );
+
+//       exec(
+//         `start "" "${resolvedPath}"`
+//       );
+
+//       return {
+
+//         success: true,
+
+//         opened:
+//           resolvedPath
+//       };
+//     }
+
+//     /*
+//     =========================================
+//     APP MAP
+//     =========================================
+//     */
+
+//     const appMap:
+//       Record<string, string> = {
+
+//       chrome:
+//         "start chrome",
+
+//       "google chrome":
+//         "start chrome",
+
+//       edge:
+//         "start msedge",
+
+//       "microsoft edge":
+//         "start msedge",
+
+//       vscode:
+//         "code",
+
+//       "visual studio code":
+//         "code",
+
+//       notepad:
+//         "notepad",
+
+//       calculator:
+//         "calc",
+
+//       spotify:
+//         "start spotify"
+//     };
+
+//     const normalized =
+//       target.toLowerCase();
+
+//     const command =
+//       appMap[
+//         normalized
+//       ];
+
+//     if (!command) {
+
+//       throw new Error(
+//         `Unsupported target:
+//          ${target}`
+//       );
+//     }
+
+//     /*
+//     =========================================
+//     OPEN APP
+//     =========================================
+//     */
+
+//     console.log(
+//       "OPENING APP:",
+//       command
+//     );
+
+//     exec(command);
+
+//     return {
+
+//       success: true,
+
+//       opened:
+//         target
+//     };
+//   }
+// }
+
+// export const openAppTool =
+//   new OpenAppTool();
+
 import { exec }
 from "child_process";
+
+import fs
+from "fs";
+
+import path
+from "path";
+
+import os
+from "os";
 
 import { Tool }
 from "./index.ts";
@@ -7,11 +355,10 @@ from "./index.ts";
 export class OpenAppTool
   implements Tool {
 
-  
   name = "open_app";
 
   description =
-    "Open desktop applications";
+    "Open applications, files, or folders";
 
   parameters = [
 
@@ -21,126 +368,197 @@ export class OpenAppTool
       type: "string",
 
       description:
-        "Application name to open",
+        "Application, file path, or folder path to open",
 
       required: true
     }
   ];
 
-  private normalizeAppName(
-    appName: string
+  /*
+  =========================================
+  RESOLVE USER PATHS
+  =========================================
+  */
+
+  resolvePath(
+    target: string
   ) {
-  
-    const normalized =
-  
-      appName
-  
+
+    /*
+    =========================================
+    ABSOLUTE PATH
+    =========================================
+    */
+
+    if (
+      path.isAbsolute(
+        target
+      )
+    ) {
+
+      return target;
+    }
+
+    const homeDir =
+      os.homedir();
+
+    /*
+    =========================================
+    ONEDRIVE DETECTION
+    =========================================
+    */
+
+    const baseDir =
+
+      fs.existsSync(
+
+        path.join(
+          homeDir,
+          "OneDrive"
+        )
+
+      )
+
+        ?
+
+        path.join(
+          homeDir,
+          "OneDrive"
+        )
+
+        :
+
+        homeDir;
+
+    /*
+    =========================================
+    DESKTOP
+    =========================================
+    */
+
+    if (
+      target
         .toLowerCase()
-  
-        .trim();
-  
-    if (
-      normalized.includes(
-        "chrome"
-      )
+        .includes(
+          "desktop"
+        )
     ) {
-  
-      return "chrome";
+
+      return path.join(
+
+        baseDir,
+
+        "Desktop",
+
+        target
+
+          .replace(
+            /desktop/gi,
+            ""
+          )
+
+          .replace(
+            /^[/\\]/,
+            ""
+          )
+      );
     }
-  
+
+    /*
+    =========================================
+    DOCUMENTS
+    =========================================
+    */
+
     if (
-      normalized.includes(
-        "edge"
-      )
+      target
+        .toLowerCase()
+        .includes(
+          "documents"
+        )
     ) {
-  
-      return "edge";
+
+      return path.join(
+
+        baseDir,
+
+        "Documents",
+
+        target
+
+          .replace(
+            /documents/gi,
+            ""
+          )
+
+          .replace(
+            /^[/\\]/,
+            ""
+          )
+      );
     }
-  
+
+    /*
+    =========================================
+    DOWNLOADS
+    =========================================
+    */
+
     if (
-      normalized.includes(
-        "visual studio"
-      ) ||
-  
-      normalized.includes(
-        "vs code"
-      ) ||
-  
-      normalized.includes(
-        "vscode"
-      )
+      target
+        .toLowerCase()
+        .includes(
+          "downloads"
+        )
     ) {
-  
-      return "vscode";
+
+      return path.join(
+
+        baseDir,
+
+        "Downloads",
+
+        target
+
+          .replace(
+            /downloads/gi,
+            ""
+          )
+
+          .replace(
+            /^[/\\]/,
+            ""
+          )
+      );
     }
-  
-    if (
-      normalized.includes(
-        "notepad"
-      )
-    ) {
-  
-      return "notepad";
-    }
-  
-    if (
-      normalized.includes(
-        "spotify"
-      )
-    ) {
-  
-      return "spotify";
-    }
-  
-    if (
-      normalized.includes(
-        "calculator"
-      )
-    ) {
-  
-      return "calculator";
-    }
-  
-    if (
-      normalized.includes(
-        "paint"
-      )
-    ) {
-  
-      return "paint";
-    }
-  
-    return normalized;
+
+    /*
+    =========================================
+    DEFAULT
+    =========================================
+    */
+
+    return target;
   }
 
-  private appMappings:
-    Record<string, string> = {
-
-    chrome:
-      "start chrome",
-
-    vscode:
-      "code",
-
-    notepad:
-      "notepad",
-
-    spotify:
-      "start spotify",
-
-    calculator:
-      "calc",
-
-    paint:
-      "mspaint"
-  };
+  /*
+  =========================================
+  MAIN EXECUTION
+  =========================================
+  */
 
   async execute(
     input: any
   ) {
 
-    let appName =
+    let target =
       input.app;
+
+    /*
+    =========================================
+    PARAM EXTRACTION
+    =========================================
+    */
 
     if (
       input.parameters &&
@@ -159,40 +577,160 @@ export class OpenAppTool
           "app"
         ) {
 
-          appName =
+          target =
             param.value;
         }
       }
     }
 
-    if (!appName) {
+    /*
+    =========================================
+    VALIDATION
+    =========================================
+    */
+
+    if (!target) {
 
       throw new Error(
-        "App name missing"
-      );
-    }
-
-    const normalizedApp = this.normalizeAppName(appName);
-    const command = this.appMappings[normalizedApp];
-
-    if (!command) {
-
-      throw new Error(
-        `Unsupported app:
-         ${appName}`
+        "Open target missing"
       );
     }
 
     console.log(
-      `OPENING APP:
-       ${appName}`
+      "OPEN TARGET:",
+      target
+    );
+
+    /*
+    =========================================
+    RESOLVE PATH
+    =========================================
+    */
+
+    const resolvedPath =
+      this.resolvePath(
+        target
+      );
+
+    console.log(
+      "RESOLVED PATH:",
+      resolvedPath
+    );
+
+    /*
+    =========================================
+    OPEN FILE OR FOLDER
+    =========================================
+    */
+
+    if (
+      fs.existsSync(
+        resolvedPath
+      )
+    ) {
+
+      console.log(
+        "OPENING FILE/FOLDER:",
+        resolvedPath
+      );
+
+      exec(
+        `start "" "${resolvedPath}"`
+      );
+
+      return {
+
+        success: true,
+
+        opened:
+          resolvedPath
+      };
+    }
+
+    /*
+    =========================================
+    APPLICATION MAP
+    =========================================
+    */
+
+    const appMap:
+      Record<string, string> = {
+
+      chrome:
+        "start chrome",
+
+      "google chrome":
+        "start chrome",
+
+      edge:
+        "start msedge",
+
+      "microsoft edge":
+        "start msedge",
+
+      explorer:
+        "start explorer",
+
+      "file explorer":
+        "start explorer",
+
+      vscode:
+        "code",
+
+      "visual studio code":
+        "code",
+
+      notepad:
+        "notepad",
+
+      calculator:
+        "calc",
+
+      spotify:
+        "start spotify"
+    };
+
+    const normalized =
+      target.toLowerCase();
+
+    const command =
+      appMap[
+        normalized
+      ];
+
+    /*
+    =========================================
+    UNKNOWN APP
+    =========================================
+    */
+
+    if (!command) {
+
+      throw new Error(
+        `Unsupported target:
+${target}`
+      );
+    }
+
+    /*
+    =========================================
+    OPEN APPLICATION
+    =========================================
+    */
+
+    console.log(
+      "OPENING APP:",
+      command
     );
 
     exec(command);
 
     return {
+
       success: true,
-      app: normalizedApp
+
+      opened:
+        target
     };
   }
 }

@@ -2,6 +2,7 @@ import { planTask } from "../../agent/planner.ts";
 import { executeTool } from "../../tools/executor.ts";
 import { saveMemory } from "../../memory/memory.service.ts";
 import { saveVectorMemory } from "../../memory/vector-memory.service.ts";
+import { executeWorkflow } from "../../execution/execution-engine.ts";
 
 export async function planCommand(
 
@@ -94,34 +95,36 @@ export async function executePlannedTask(
       task
     );
 
-    const results: any[] = [];
+    // const results: any[] = [];
 
-    for (
-      const step
-      of task.steps
-    ) {
+    // for (
+    //   const step
+    //   of task.steps
+    // ) {
 
-      console.log(
-        "EXECUTING STEP:",
-        step.intent
-      );
+    //   console.log(
+    //     "EXECUTING STEP:",
+    //     step.intent
+    //   );
 
-      const result =
-        await executeTool(
+    //   const result =
+    //     await executeTool(
 
-          step.intent,
+    //       step.intent,
 
-          step
-        );
+    //       step
+    //     );
 
-      results.push({
+    //   results.push({
 
-        intent:
-          step.intent,
+    //     intent:
+    //       step.intent,
 
-        result
-      });
-    }
+    //     result
+    //   });
+    // }
+
+    const result = await executeWorkflow(task);
 
     console.log(
       "TASK EXECUTED SUCCESSFULLY"
@@ -135,7 +138,7 @@ export async function executePlannedTask(
     
       {
         task,
-        results
+        result
       }
     );
 
@@ -145,7 +148,7 @@ export async function executePlannedTask(
     
       {
         task,
-        results
+        result
       }
     );
 
@@ -153,7 +156,7 @@ export async function executePlannedTask(
 
       success: true,
 
-      results
+      result
     });
 
   } catch (error: any) {
