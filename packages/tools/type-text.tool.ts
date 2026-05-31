@@ -1,112 +1,5 @@
-// import { keyboard, Key, sleep } from "@nut-tree-fork/nut-js";
-// import { Tool } from "./index.ts";
-  
-//   export class TypeTextTool
-//     implements Tool {
-  
-//     name = "type_text";
-  
-//     description =
-//       "Type text using keyboard automation";
-  
-//     parameters = [
-  
-//       {
-//         name: "text",
-  
-//         type: "string",
-  
-//         description:
-//           "Text to type",
-  
-//         required: true
-//       }
-//     ];
-  
-//     async execute(
-//       input: any
-//     ) {
-    
-//       let text =
-//         input.text;
-    
-//       if (
-//         input.parameters &&
-//         Array.isArray(
-//           input.parameters
-//         )
-//       ) {
-    
-//         for (
-//           const param
-//           of input.parameters
-//         ) {
-    
-//           if (
-//             param.name ===
-//             "text"
-//           ) {
-    
-//             text =
-//               param.value;
-//           }
-//         }
-//       }
-    
-//       if (!text) {
-    
-//         throw new Error(
-//           "Text missing"
-//         );
-//       }
-    
-//       console.log(
-//         "TYPING TEXT:",
-//         text
-//       );
-    
-//       /*
-//       =========================================
-//       STABILIZATION DELAY
-//       =========================================
-//       */
-    
-//       await sleep(20000);
-    
-//       /*
-//       =========================================
-//       TYPE CHARACTER BY CHARACTER
-//       =========================================
-//       */
-    
-//       for ( const char of text) {
-//         await keyboard.type( char);
-//         await sleep(2000);
-//       }
-    
-//       return {
-//         success: true,
-//         typed:
-//           text
-//       };
-//     }
-//   }
-  
-//   export const typeTextTool =
-//     new TypeTextTool();
-
-import {
-
-  keyboard,
-
-  sleep
-
-}
-
-from "@nut-tree-fork/nut-js";
-
-import { Tool }
-from "./index.ts";
+import { keyboard, Key ,sleep } from "@nut-tree-fork/nut-js";
+import { Tool } from "./index.ts";
 
 export class TypeTextTool
   implements Tool {
@@ -133,79 +26,214 @@ export class TypeTextTool
   async execute(
     input: any
   ) {
-
+  
     let text =
       input.text;
-
+  
     if (
+  
       input.parameters &&
+  
       Array.isArray(
         input.parameters
       )
+  
     ) {
-
+  
       for (
         const param
         of input.parameters
       ) {
-
+  
         if (
           param.name ===
           "text"
         ) {
-
+  
           text =
             param.value;
         }
       }
     }
-
+  
     if (!text) {
-
+  
       throw new Error(
         "Text missing"
       );
     }
-
+  
     console.log(
-      "TYPING TEXT:",
+      "TYPING INPUT:",
       text
     );
-
+  
     /*
     =========================================
-    WAIT FOR WINDOW FOCUS
+    STABILIZATION DELAY
     =========================================
     */
-
-    console.log(
-      "FOCUS TARGET WINDOW NOW..."
-    );
-
-    await sleep(5000);
-
+  
+    await sleep(1000);
+  
     /*
     =========================================
-    TYPE CHARACTER BY CHARACTER
+    SPECIAL KEY DETECTION
     =========================================
     */
-
-    for (
-      const char
-      of text
+  
+    const lowerText =
+      text.toLowerCase();
+  
+    /*
+    =========================================
+    ENTER
+    =========================================
+    */
+  
+    if (
+      lowerText.includes(
+        "and press enter"
+      )
     ) {
-
+  
+      const cleanText =
+  
+        text.replace(
+          /and press enter/gi,
+          ""
+        ).trim();
+  
       await keyboard.type(
-        char
+        cleanText
       );
-
-      await sleep(80);
+  
+      await sleep(300);
+  
+      await keyboard.pressKey(
+        Key.Enter
+      );
+  
+      await keyboard.releaseKey(
+        Key.Enter
+      );
+  
+      return {
+  
+        success: true,
+  
+        typed:
+          cleanText,
+  
+        action:
+          "enter"
+      };
     }
-
+  
+    /*
+    =========================================
+    TAB
+    =========================================
+    */
+  
+    if (
+      lowerText.includes(
+        "and press tab"
+      )
+    ) {
+  
+      const cleanText =
+  
+        text.replace(
+          /and press tab/gi,
+          ""
+        ).trim();
+  
+      await keyboard.type(
+        cleanText
+      );
+  
+      await sleep(300);
+  
+      await keyboard.pressKey(
+        Key.Tab
+      );
+  
+      await keyboard.releaseKey(
+        Key.Tab
+      );
+  
+      return {
+  
+        success: true,
+  
+        typed:
+          cleanText,
+  
+        action:
+          "tab"
+      };
+    }
+  
+    /*
+    =========================================
+    ESCAPE
+    =========================================
+    */
+  
+    if (
+      lowerText.includes(
+        "and press escape"
+      )
+    ) {
+  
+      const cleanText =
+  
+        text.replace(
+          /and press escape/gi,
+          ""
+        ).trim();
+  
+      await keyboard.type(
+        cleanText
+      );
+  
+      await sleep(300);
+  
+      await keyboard.pressKey(
+        Key.Escape
+      );
+  
+      await keyboard.releaseKey(
+        Key.Escape
+      );
+  
+      return {
+  
+        success: true,
+  
+        typed:
+          cleanText,
+  
+        action:
+          "escape"
+      };
+    }
+  
+    /*
+    =========================================
+    NORMAL TYPING
+    =========================================
+    */
+  
+    await keyboard.type(
+      text
+    );
+  
     return {
-
+  
       success: true,
-
+  
       typed:
         text
     };

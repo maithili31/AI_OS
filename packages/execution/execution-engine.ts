@@ -9,34 +9,15 @@ function injectContext(
 
 ) {
 
-  if (
-    typeof value !==
-    "string"
-  ) {
-
+  if (typeof value !=="string"){
     return value;
   }
-
-  return value.replace(
-
-    /\{\{(.*?)\}\}/g,
-
-    (_, key) => {
-
-      const keys =
-        key.trim().split(".");
-
-      let current =
-        context;
-
-      for (
-        const k of keys
-      ) {
-
-        current =
-          current?.[k];
+  return value.replace(/\{\{(.*?)\}\}/g,(_, key) => {
+      const keys = key.trim().split(".");
+      let current = context;
+      for (const k of keys){
+        current = current?.[k];
       }
-
       return current ?? "";
     }
   );
@@ -44,9 +25,7 @@ function injectContext(
 
 export async function executeWorkflow(task: any){
   if ( !task.steps || !Array.isArray(task.steps)) {
-      throw new Error(
-        "No execution steps found"
-      );
+      throw new Error("No execution steps found");
   }
   
     const results = [];
@@ -54,8 +33,7 @@ export async function executeWorkflow(task: any){
   
     for (const step of task.steps){
       for (const key in step){
-        step[key] =
-          injectContext(
+        step[key] = injectContext(
             step[key],
             context.getAll()
           );
@@ -97,12 +75,8 @@ export async function executeWorkflow(task: any){
           );
   
           results.push({
-            intent:
-              step.intent,
-  
-            success:
-              true,
-  
+            intent: step.intent,
+            success: true,
             result
           });
   
@@ -138,7 +112,6 @@ export async function executeWorkflow(task: any){
         );
       }
     }
-  
     return {
       success: true,
       results

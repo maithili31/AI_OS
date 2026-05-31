@@ -1,10 +1,9 @@
 import fs from "fs";
-
 import os from "os";
-
 import path from "path";
 
-import { Tool } from "./index.ts";
+import { Tool }
+from "./index.ts";
 
 export class FilesystemTool
   implements Tool {
@@ -12,7 +11,7 @@ export class FilesystemTool
   name = "filesystem";
 
   description =
-    "Perform filesystem operations like creating folders";
+    "Create, move, rename, delete, read, and find files/folders";
 
   parameters = [
 
@@ -22,7 +21,7 @@ export class FilesystemTool
       type: "string",
 
       description:
-        "Filesystem operation to perform",
+        "Filesystem operation",
 
       required: true
     },
@@ -33,146 +32,258 @@ export class FilesystemTool
       type: "string",
 
       description:
-        "Target filesystem path",
+        "Target path",
 
-      required: true
+      required: false
     }
   ];
+
+  /*
+  =========================================
+  RESOLVE USER PATHS
+  =========================================
+  */
 
   resolvePath(
     targetPath: string
   ) {
-  
+
+    const homeDir =
+      os.homedir();
+
+    /*
+    =========================================
+    ONEDRIVE
+    =========================================
+    */
+
+    const oneDriveDir =
+      path.join(
+        homeDir,
+        "OneDrive"
+      );
+
     const baseDir =
 
-  fs.existsSync(
-
-    path.join(
-      os.homedir(),
-      "OneDrive"
-    )
-
-  )
-
-    ?
-
-    path.join(
-      os.homedir(),
-      "OneDrive"
-    ) : os.homedir();
-  
-    const oneDriveDesktop =
-      path.join(
-        baseDir,
-        "OneDrive",
-        "Desktop"
-      );
-  
-    const localDesktop =
-      path.join(
-        baseDir,
-        "Desktop"
-      );
-  
-    const desktopBasePath =
-  
       fs.existsSync(
-        oneDriveDesktop
+        oneDriveDir
       )
-  
-        ? oneDriveDesktop
-  
-        : localDesktop;
-  
+
+        ?
+
+        oneDriveDir
+
+        :
+
+        homeDir;
+
     const cleanedPath =
-  
+
       targetPath
-  
-        .replace(/^[/\\\\]+/, "")
-  
+
+        .replace(
+          /^[/\\\\]+/,
+          ""
+        )
+
         .trim();
-  
+
+    /*
+    =========================================
+    DESKTOP
+    =========================================
+    */
+
     if (
-  
+
       cleanedPath
         .toLowerCase()
-        .includes("desktop")
-  
+        .startsWith(
+          "desktop"
+        )
+
     ) {
-  
+
       return path.join(
-  
-        desktopBasePath,
-  
+
+        baseDir,
+
+        "Desktop",
+
         cleanedPath
-  
+
           .replace(
             /desktop/gi,
             ""
           )
-  
-          .replace(/^[/\\\\]+/, "")
-  
+
+          .replace(
+            /^[/\\\\]+/,
+            ""
+          )
+
           .trim()
       );
     }
-  
+
+    /*
+    =========================================
+    DOCUMENTS
+    =========================================
+    */
+
     if (
-  
+
       cleanedPath
         .toLowerCase()
-        .includes("document")
-  
+        .startsWith(
+          "documents"
+        )
+
+      ||
+
+      cleanedPath
+        .toLowerCase()
+        .startsWith(
+          "document"
+        )
     ) {
-  
+
       return path.join(
-  
+
         baseDir,
-  
+
         "Documents",
-  
+
         cleanedPath
-  
+
           .replace(
             /documents?/gi,
             ""
           )
-  
-          .replace(/^[/\\\\]+/, "")
-  
+
+          .replace(
+            /^[/\\\\]+/,
+            ""
+          )
+
           .trim()
       );
     }
-  
+
+    /*
+    =========================================
+    DOWNLOADS
+    =========================================
+    */
+
     if (
-  
+
       cleanedPath
         .toLowerCase()
-        .includes("download")
-  
+        .startsWith(
+          "downloads"
+        )
+
+      ||
+
+      cleanedPath
+        .toLowerCase()
+        .startsWith(
+          "download"
+        )
     ) {
-  
+
       return path.join(
-  
+
         baseDir,
-  
+
         "Downloads",
-  
+
         cleanedPath
-  
+
           .replace(
             /downloads?/gi,
             ""
           )
-  
-          .replace(/^[/\\\\]+/, "")
-  
+
+          .replace(
+            /^[/\\\\]+/,
+            ""
+          )
+
           .trim()
       );
     }
-  
+
+    /*
+    =========================================
+    PICTURES
+    =========================================
+    */
+
+    if (
+
+      cleanedPath
+        .toLowerCase()
+        .startsWith(
+          "pictures"
+        )
+
+      ||
+
+      cleanedPath
+        .toLowerCase()
+        .startsWith(
+          "picture"
+        )
+    ) {
+
+      return path.join(
+
+        baseDir,
+
+        "Pictures",
+
+        cleanedPath
+
+          .replace(
+            /pictures?/gi,
+            ""
+          )
+
+          .replace(
+            /^[/\\\\]+/,
+            ""
+          )
+
+          .trim()
+      );
+    }
+
+    /*
+    =========================================
+    ABSOLUTE PATH
+    =========================================
+    */
+
+    if (
+      path.isAbsolute(
+        cleanedPath
+      )
+    ) {
+
+      return cleanedPath;
+    }
+
     return cleanedPath;
   }
+
+  /*
+  =========================================
+  MAIN EXECUTION
+  =========================================
+  */
 
   async execute(
     input: any
@@ -184,48 +295,84 @@ export class FilesystemTool
     let targetPath =
       input.path;
 
-    if (input.parameters && Array.isArray(input.parameters)){
-      for (const param of input.parameters){
-        if (param.name ==="operation"){
-          operation = param.value;
+    /*
+    =========================================
+    PARAM EXTRACTION
+    =========================================
+    */
+
+    if (
+
+      input.parameters &&
+
+      Array.isArray(
+        input.parameters
+      )
+
+    ) {
+
+      for (
+        const param
+        of input.parameters
+      ) {
+
+        if (
+          param.name ===
+          "operation"
+        ) {
+
+          operation =
+            param.value;
         }
-        if (param.name ==="path"){
-          targetPath = param.value;
+
+        if (
+          param.name ===
+          "path"
+        ) {
+
+          targetPath =
+            param.value;
         }
       }
     }
 
-    if (!targetPath) {
-      throw new Error("Path is required");
-    }
-
-    const resolvedPath = this.resolvePath(targetPath);
     const normalizedOperation =
-      operation
-        ?.toLowerCase()
-        ?.replace(/\s+/g, "_");
 
-    if ( 
-      
+      operation
+
+        ?.toLowerCase()
+
+        ?.replace(
+          /\s+/g,
+          "_"
+        );
+
+    console.log(
+      "FILESYSTEM OPERATION:",
+      normalizedOperation
+    );
+
+    /*
+    =========================================
+    CREATE FOLDER
+    =========================================
+    */
+
+    if (
+
       normalizedOperation ===
         "create_folder"
 
       ||
 
       normalizedOperation ===
-        "create_file"
-
-      ||
-
-      normalizedOperation ===
-        "create"
-
-      ||
-
-      normalizedOperation ===
         "mkdir"
-
     ) {
+
+      const resolvedPath =
+        this.resolvePath(
+          targetPath
+        );
 
       fs.mkdirSync(
         resolvedPath,
@@ -235,23 +382,407 @@ export class FilesystemTool
       );
 
       console.log(
-        `FOLDER CREATED:
-         ${resolvedPath}`
+        "FOLDER CREATED:",
+        resolvedPath
       );
+
+      return {
+
+        success: true,
+
+        operation:
+          normalizedOperation,
+
+        path:
+          resolvedPath
+      };
     }
 
-    else {
+    /*
+    =========================================
+    CREATE FILE
+    =========================================
+    */
+
+    if (
+
+      normalizedOperation ===
+        "create_file"
+
+      ||
+
+      normalizedOperation ===
+        "touch"
+    ) {
+
+      const resolvedPath =
+        this.resolvePath(
+          targetPath
+        );
+
+      const parentDir =
+        path.dirname(
+          resolvedPath
+        );
+
+      fs.mkdirSync(
+        parentDir,
+        {
+          recursive: true
+        }
+      );
+
+      fs.writeFileSync(
+        resolvedPath,
+        ""
+      );
 
       console.log(
-        `UNKNOWN OPERATION:
-         ${operation}`
+        "FILE CREATED:",
+        resolvedPath
       );
+
+      return {
+
+        success: true,
+
+        operation:
+          normalizedOperation,
+
+        path:
+          resolvedPath
+      };
     }
 
-    return {
-      success: true,
-      operation:normalizedOperation,
-      path:resolvedPath
-    };
+    /*
+    =========================================
+    MOVE FILE
+    =========================================
+    */
+
+    if (
+      normalizedOperation ===
+      "move_file"
+    ) {
+
+      const source =
+        this.resolvePath(
+          input.source
+        );
+
+      const destination =
+        this.resolvePath(
+          input.destination
+        );
+
+      fs.renameSync(
+        source,
+        destination
+      );
+
+      console.log(
+        "FILE MOVED:",
+        destination
+      );
+
+      return {
+
+        success: true,
+
+        source,
+
+        destination
+      };
+    }
+
+    /*
+    =========================================
+    RENAME FILE
+    =========================================
+    */
+
+    if (
+      normalizedOperation ===
+      "rename_file"
+    ) {
+
+      const source =
+        this.resolvePath(
+          input.source
+        );
+
+      const newName =
+        input.new_name;
+
+      const destination =
+        path.join(
+
+          path.dirname(
+            source
+          ),
+
+          newName
+        );
+
+      fs.renameSync(
+        source,
+        destination
+      );
+
+      console.log(
+        "FILE RENAMED:",
+        destination
+      );
+
+      return {
+
+        success: true,
+
+        source,
+
+        destination
+      };
+    }
+
+    /*
+    =========================================
+    DELETE FILE/FOLDER
+    =========================================
+    */
+
+    if (
+
+      normalizedOperation ===
+        "delete_file"
+
+      ||
+
+      normalizedOperation ===
+        "delete_folder"
+
+      ||
+
+      normalizedOperation ===
+        "delete"
+    ) {
+
+      const resolvedPath =
+        this.resolvePath(
+          targetPath
+        );
+
+      if (
+        !fs.existsSync(
+          resolvedPath
+        )
+      ) {
+
+        throw new Error(
+          `Path not found:
+${resolvedPath}`
+        );
+      }
+
+      const stats =
+        fs.statSync(
+          resolvedPath
+        );
+
+      if (
+        stats.isDirectory()
+      ) {
+
+        fs.rmSync(
+          resolvedPath,
+          {
+            recursive: true,
+            force: true
+          }
+        );
+
+      } else {
+
+        fs.unlinkSync(
+          resolvedPath
+        );
+      }
+
+      console.log(
+        "DELETED:",
+        resolvedPath
+      );
+
+      return {
+
+        success: true,
+
+        deleted:
+          resolvedPath
+      };
+    }
+
+    /*
+    =========================================
+    READ FILE
+    =========================================
+    */
+
+    if (
+      normalizedOperation ===
+      "read_file"
+    ) {
+
+      const resolvedPath =
+        this.resolvePath(
+          targetPath
+        );
+
+      const content =
+        fs.readFileSync(
+          resolvedPath,
+          "utf-8"
+        );
+
+      console.log(
+        "FILE CONTENT:",
+        content
+      );
+
+      return {
+
+        success: true,
+
+        content
+      };
+    }
+
+    /*
+    =========================================
+    FIND FILE
+    =========================================
+    */
+
+    if (
+      normalizedOperation ===
+      "find_file"
+    ) {
+
+      const query =
+
+        input.query
+          ?.toLowerCase();
+
+      const results:
+        string[] = [];
+
+      const searchDir =
+        fs.existsSync(
+          oneDriveDir
+        )
+
+          ?
+
+          oneDriveDir
+
+          :
+
+          homeDir;
+
+      function searchDirectory(
+        dir: string
+      ) {
+
+        let items: string[] =
+          [];
+
+        try {
+
+          items =
+            fs.readdirSync(
+              dir
+            );
+
+        } catch {
+
+          return;
+        }
+
+        for (
+          const item
+          of items
+        ) {
+
+          const fullPath =
+            path.join(
+              dir,
+              item
+            );
+
+          try {
+
+            const stats =
+              fs.statSync(
+                fullPath
+              );
+
+            if (
+              stats.isDirectory()
+            ) {
+
+              searchDirectory(
+                fullPath
+              );
+
+            } else {
+
+              if (
+
+                item
+                  .toLowerCase()
+                  .includes(
+                    query
+                  )
+              ) {
+
+                results.push(
+                  fullPath
+                );
+              }
+            }
+
+          } catch {}
+        }
+      }
+
+      searchDirectory(
+        searchDir
+      );
+
+      console.log(
+        "FILES FOUND:",
+        results
+      );
+
+      return {
+
+        success: true,
+
+        results
+      };
+    }
+
+    /*
+    =========================================
+    UNKNOWN OPERATION
+    =========================================
+    */
+
+    throw new Error(
+      `Unknown filesystem operation:
+${operation}`
+    );
   }
 }
+
+export const filesystemTool =
+  new FilesystemTool();

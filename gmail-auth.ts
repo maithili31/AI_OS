@@ -1,23 +1,36 @@
 import fs from "fs";
 
+import path from "path";
+
 import readline from "readline";
 
-import { google } from "googleapis";
+import { google }
+from "googleapis";
 
 const SCOPES = [
-
-  "https://www.googleapis.com/auth/gmail.readonly",
-
   "https://www.googleapis.com/auth/gmail.send"
 ];
 
-const credentials = JSON.parse(
+const TOKEN_PATH =
+  path.join(
+    process.cwd(),
+    "token.json"
+  );
 
-  fs.readFileSync(
-    "credentials.json",
-    "utf-8"
-  )
-);
+const CREDENTIALS_PATH =
+  path.join(
+    process.cwd(),
+    "credentials.json"
+  );
+
+const credentials =
+  JSON.parse(
+
+    fs.readFileSync(
+      CREDENTIALS_PATH,
+      "utf-8"
+    )
+  );
 
 const {
   client_secret,
@@ -38,47 +51,82 @@ const auth =
 const authUrl =
   auth.generateAuthUrl({
 
-    access_type: "offline",
+    access_type:
+      "offline",
 
-    scope: SCOPES
+    scope:
+      SCOPES,
+
+    prompt:
+      "consent"
   });
 
 console.log(
-  "AUTHORIZE HERE:"
+  "\nOPEN THIS URL IN BROWSER:\n"
 );
 
-console.log(authUrl);
+console.log(
+  authUrl
+);
+
+console.log(
+  "\nPASTE AUTH CODE BELOW:\n"
+);
 
 const rl =
   readline.createInterface({
 
-    input: process.stdin,
+    input:
+      process.stdin,
 
-    output: process.stdout
+    output:
+      process.stdout
   });
 
 rl.question(
-  "ENTER CODE: ",
+  "CODE: ",
 
-  async code => {
+  async (code) => {
 
-    const { tokens } =
-      await auth.getToken(code);
+    try {
 
-    fs.writeFileSync(
+      const {
+        tokens
+      } = await auth.getToken(
+        code
+      );
 
-      "token.json",
+      auth.setCredentials(
+        tokens
+      );
 
-      JSON.stringify(
-        tokens,
-        null,
-        2
-      )
-    );
+      fs.writeFileSync(
 
-    console.log(
-      "TOKEN SAVED"
-    );
+        TOKEN_PATH,
+
+        JSON.stringify(
+          tokens,
+          null,
+          2
+        )
+      );
+
+      console.log(
+        "\nTOKEN SAVED SUCCESSFULLY"
+      );
+
+      console.log(
+        `\nSaved at:
+${TOKEN_PATH}`
+      );
+
+    } catch (error) {
+
+      console.error(
+        "\nAUTH FAILED:\n",
+        error
+      );
+    }
 
     rl.close();
   }

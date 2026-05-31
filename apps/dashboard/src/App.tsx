@@ -3,6 +3,14 @@ import axios from "axios";
 import type { Workflow } from "./types";
 import type { Execution } from "./execution.types";
 import type { DLQEvent } from "./dlq.types";
+import { Mic } from "lucide-react";
+
+declare global {
+  interface Window {
+    SpeechRecognition: any;
+    webkitSpeechRecognition: any;
+  }
+}
 
 export default function App() {
   const [command, setCommand] = useState("");
@@ -15,6 +23,441 @@ export default function App() {
   const [trigger, setTrigger] = useState("gmail.new_email");
   const [contains, setContains] = useState("@");
   const [actions, setActions] = useState("notify_user");
+  const [isListening, setIsListening] = useState(false);
+  const [wakeMode, setWakeMode] = useState(false);
+  const [micBusy, setMicBusy] = useState(false);
+
+  const startVoiceRecognition = () => {
+    
+    setMicBusy(true);
+    speechSynthesis.cancel();
+    const SpeechRecognition =
+  
+      window.SpeechRecognition ||
+  
+      window.webkitSpeechRecognition;
+  
+    if (!SpeechRecognition) {
+  
+      alert(
+        "Speech Recognition not supported in this browser"
+      );
+  
+      return;
+    }
+  
+    const recognition =
+      new SpeechRecognition();
+  
+    recognition.lang =
+      "en-US";
+  
+    recognition.continuous =
+      false;
+  
+    recognition.interimResults =
+      false;
+  
+    recognition.onstart =
+      () => {
+  
+        console.log(
+          "VOICE LISTENING..."
+        );
+  
+        setIsListening(true);
+      };
+  
+    recognition.onresult =
+      async (event: any) => {
+  
+    let transcript = event.results[0][0].transcript;
+
+    /*
+    =========================================
+    VOICE NORMALIZATION
+    =========================================
+    */
+
+    transcript =
+      transcript
+        .replace(
+          /\bat the rate\b/gi,
+          "@"
+        )
+
+        .replace(
+          /\battherate\b/gi,
+          "@"
+        )
+
+        .replace(
+          /\bdot\b/gi,
+          "."
+        )
+
+        .replace(
+          /\bunderscore\b/gi,
+          "_"
+        )
+
+        .replace(
+          /\bdash\b/gi,
+          "-"
+        )
+
+        .replace(
+          /\bhyphen\b/gi,
+          "-"
+        )
+
+        .replace(
+          /\s*@\s*/g,
+          "@"
+        )
+
+        .replace(
+          /\s*\.\s*/g,
+          "."
+        )
+
+        /*
+        =========================================
+        FIX SPACES BEFORE EMAIL NUMBERS
+        =========================================
+        */
+
+        .replace(
+          /\s+(?=\d+@)/g,
+          ""
+        )
+
+        .trim();
+
+    /*
+    =========================================
+    LOWERCASE EMAILS
+    =========================================
+    */
+
+    if (
+      transcript.includes("@")
+    ) {
+
+      transcript =
+        transcript.toLowerCase();
+    }
+
+    console.log(
+      "VOICE COMMAND:",
+      transcript
+    );
+
+    setCommand(
+      transcript
+    );
+  
+        /*
+        =========================================
+        UPDATE INPUT
+        =========================================
+        */
+  
+        setCommand(
+          transcript
+        );
+  
+        try {
+  
+          /*
+          =========================================
+          AUTO PLAN
+          =========================================
+          */
+  
+          const response =
+  
+            await axios.post(
+  
+              "http://localhost:3000/agent/plan",
+  
+              {
+                command:
+                  transcript
+              }
+            );
+  
+          setPlannedTask(
+            response.data
+          );
+  
+          /*
+          =========================================
+          AUTO EXECUTE
+          =========================================
+          */
+  
+          const executionResponse =
+  
+            await axios.post(
+  
+              "http://localhost:3000/agent/execute",
+  
+              response.data
+            );
+  
+          setExecutionResult(
+            executionResponse.data
+          );
+  
+          /*
+          =========================================
+          SUCCESS VOICE
+          =========================================
+          */
+  
+          const utterance =
+  
+            new SpeechSynthesisUtterance(
+              "Task completed successfully"
+            );
+  
+          speechSynthesis.speak(
+            utterance
+          );
+  
+          loadExecutions();
+  
+        } catch (error) {
+  
+          console.error(
+            error
+          );
+  
+          const utterance =
+  
+            new SpeechSynthesisUtterance(
+              "Task failed"
+            );
+  
+          speechSynthesis.speak(
+            utterance
+          );
+        }
+      };
+  
+    recognition.onerror =
+      (event: any) => {
+  
+        console.error(
+          "VOICE ERROR:",
+          event
+        );
+  
+        setIsListening(false);
+      };
+  
+      recognition.onend =
+      () => {
+    
+        console.log(
+          "VOICE STOPPED"
+        );
+    
+        setIsListening(false);
+    
+        setMicBusy(false);
+    
+        /*
+        =========================================
+        RESTART WAKE MODE
+        =========================================
+        */
+    
+        setTimeout(
+          () => {
+    
+            startWakeWordDetection();
+    
+          },
+          2000
+        );
+      };
+  
+    recognition.start();
+  };
+  
+  /*
+  =========================================
+  WAKE WORD DETECTION
+  =========================================
+  */
+  
+  const startWakeWordDetection = () => {
+
+    /*
+    =========================================
+    PREVENT DUPLICATE LISTENERS
+    =========================================
+    */
+    if (micBusy) {
+      return;
+    }
+  
+    if (
+      wakeMode ||
+      isListening
+    ) {
+  
+      return;
+    }
+  
+    const SpeechRecognition =
+  
+      window.SpeechRecognition ||
+  
+      window.webkitSpeechRecognition;
+  
+    if (!SpeechRecognition) {
+  
+      console.error(
+        "Speech recognition unsupported"
+      );
+  
+      return;
+    }
+  
+    const recognition =
+      new SpeechRecognition();
+  
+    recognition.continuous =
+      true;
+  
+    recognition.interimResults =
+      false;
+  
+    recognition.lang =
+      "en-US";
+  
+    recognition.maxAlternatives =
+      1;
+  
+    recognition.onstart =
+      () => {
+  
+        console.log(
+          "WAKE WORD ACTIVE"
+        );
+  
+        setWakeMode(true);
+      };
+  
+    recognition.onresult =
+      (event: any) => {
+  
+        const transcript =
+  
+          event.results[
+            event.results.length - 1
+          ][0].transcript
+            .toLowerCase();
+  
+        console.log(
+          "HEARD:",
+          transcript
+        );
+  
+        /*
+        =========================================
+        WAKE WORD
+        =========================================
+        */
+  
+        if (
+  
+          transcript.includes(
+            "hey siri"
+          ) ||
+  
+          transcript.includes(
+            "hey shree"
+          )
+        ) {
+  
+          console.log(
+            "WAKE WORD DETECTED"
+          );
+          setMicBusy(true);
+          recognition.stop();
+  
+          setWakeMode(false);
+  
+          /*
+          =========================================
+          DELAY SPEECH
+          =========================================
+          */
+  
+          setTimeout(
+            () => {
+  
+              speechSynthesis.cancel();
+  
+              const utterance =
+  
+                new SpeechSynthesisUtterance(
+                  "Yes?"
+                );
+  
+              speechSynthesis.speak(
+                utterance
+              );
+  
+            },
+            500
+          );
+  
+          /*
+          =========================================
+          START COMMAND MODE
+          =========================================
+          */
+  
+          setTimeout(
+            () => {
+  
+              startVoiceRecognition();
+  
+            },
+            2000
+          );
+        }
+      };
+  
+    recognition.onerror =
+      (event: any) => {
+  
+        console.error(
+          "WAKE ERROR:",
+          event.error
+        );
+  
+        setWakeMode(false);
+      };
+  
+      recognition.onend =
+      () => {
+    
+        console.log(
+          "WAKE DETECTION STOPPED"
+        );
+    
+        setWakeMode(false);
+    
+      };
+  
+    recognition.start();
+  };
 
   async function loadExecutions() {
     const response = await axios.get("http://localhost:3000/executions");
@@ -52,9 +495,27 @@ export default function App() {
   }
 
   useEffect(() => {
+
     loadDLQEvents();
+  
     loadExecutions();
+  
     loadWorkflows();
+  
+    const timeout =
+      setTimeout(
+        () => {
+          startWakeWordDetection();
+        },
+        2500
+      );
+  
+    
+    return () =>
+      clearTimeout(
+        timeout
+      );
+  
   }, []);
 
   async function deleteWorkflow(id: string) {
@@ -106,19 +567,92 @@ export default function App() {
           <div className="mb-4">
             <h2 className="text-xl font-bold tracking-tight text-slate-900">AI Command Center</h2>
             <p className="text-sm text-slate-500 mt-0.5">Draft or process declarative execution parameters across the cluster architecture context dynamically.</p>
+            <div className="mt-3 flex items-center gap-2">
+              <div
+                className={`
+                  h-2.5
+                  w-2.5
+                  rounded-full
+                  ${wakeMode
+                    ? "bg-emerald-500 animate-pulse"
+                    : "bg-slate-300"
+                  }
+                `}
+              />
+
+              <span className="text-xs font-medium text-slate-500">
+
+                {wakeMode
+                  ? "Wake word active"
+                  : "Wake word inactive"
+                }
+              </span>
+            </div>
           </div>
           
           <div className="flex flex-col gap-4">
-            <input
-              value={command}
-              onChange={(e) => setCommand(e.target.value)}
-              placeholder="Tell AI-OS what to do..."
-              className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm font-medium text-slate-900 placeholder-slate-400 outline-hidden transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10"
-            />
-            <div className="flex justify-start">
+            <div className="flex items-center gap-3">
+
+              <input
+                value={command}
+                onChange={(e) =>
+                  setCommand(
+                    e.target.value
+                  )
+                }
+                placeholder="Tell AI-OS what to do..."
+                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm font-medium text-slate-900 placeholder-slate-400 outline-hidden transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10"
+              />
+
+              <button
+                onClick={
+                  startVoiceRecognition
+                }
+                className="
+                  flex
+                  items-center
+                  justify-center
+                  rounded-xl
+                  bg-slate-900
+                  p-3
+                  text-white
+                  shadow-xs
+                  transition
+                  hover:bg-slate-800
+                  hover:scale-105
+                  active:scale-95
+                  cursor-pointer
+                "
+              >
+                <Mic size={20} />
+              </button>
+
+            </div>
+
+            {/* <div className="flex justify-start"></div> */}
+            <div className="flex items-center gap-3">
+
               <button
                 onClick={planCommand}
-                className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-xs transition duration-200 hover:bg-blue-700 hover:shadow-md active:scale-[0.98] cursor-pointer"
+                className="
+                  inline-flex
+                  items-center
+                  justify-center
+                  rounded-xl
+                  bg-blue-600
+                  px-5
+                  py-2.5
+                  text-sm
+                  font-semibold
+                  text-white
+                  shadow-xs
+                  transition
+                  duration-200
+                  hover:bg-blue-700
+                  hover:shadow-md
+                  active:scale-[0.98]
+                  cursor-pointer
+                "
               >
                 Generate Execution Plan
               </button>
@@ -157,12 +691,56 @@ export default function App() {
               </div>
 
               <div className="mt-5 pt-4 border-t border-amber-200/60 flex justify-center">
-                <button
-                  onClick={executeTask}
-                  className="w-full sm:w-auto inline-flex items-center justify-center rounded-xl bg-emerald-600 px-6 py-2.5 text-sm font-semibold text-white shadow-xs transition duration-200 hover:bg-emerald-700 hover:shadow-md active:scale-[0.98] cursor-pointer"
-                >
-                  Execute Plan
-                </button>
+                {executionResult ? (
+                  <div
+                    className="
+                      inline-flex
+                      items-center
+                      gap-2
+                      rounded-xl
+                      bg-emerald-600
+                      px-6
+                      py-2.5
+                      text-sm
+                      font-semibold
+                      text-white
+                      shadow-xs
+                    "
+                  >
+                    ✅ Task Executed Successfully
+                  </div>
+
+                ) : (
+
+                  <button
+                    onClick={executeTask}
+                    className="
+                      w-full
+                      sm:w-auto
+                      inline-flex
+                      items-center
+                      justify-center
+                      rounded-xl
+                      bg-emerald-600
+                      px-6
+                      py-2.5
+                      text-sm
+                      font-semibold
+                      text-white
+                      shadow-xs
+                      transition
+                      duration-200
+                      hover:bg-emerald-700
+                      hover:shadow-md
+                      active:scale-[0.98]
+                      cursor-pointer
+                    "
+                  >
+                    Execute Plan
+                  </button>
+
+                )}
+
               </div>
             </div>
           )}
