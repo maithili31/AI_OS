@@ -41,6 +41,7 @@
     "googleapis": "^171.4.0",
     "lucide-react": "^1.16.0",
     "mime-types": "^3.0.2",
+    "node-notifier": "^10.0.1",
     "openai": "^6.37.0",
     "screenshot-desktop": "^1.15.4",
     "sqlite": "^5.1.1",
