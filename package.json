@@ -33,6 +33,7 @@
   },
   "dependencies": {
     "@google-cloud/local-auth": "^3.0.1",
+    "@google/generative-ai": "^0.24.1",
     "@lancedb/lancedb": "^0.29.0",
     "@nut-tree-fork/nut-js": "^4.2.6",
     "cors": "^2.8.6",
@@ -42,6 +43,7 @@
     "lucide-react": "^1.16.0",
     "mime-types": "^3.0.2",
     "node-notifier": "^10.0.1",
+    "ollama": "^0.6.3",
     "openai": "^6.37.0",
     "screenshot-desktop": "^1.15.4",
     "sqlite": "^5.1.1",

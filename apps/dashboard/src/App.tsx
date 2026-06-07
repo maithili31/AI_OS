@@ -4,6 +4,12 @@ import type { Workflow } from "./types";
 import type { Execution } from "./execution.types";
 import type { DLQEvent } from "./dlq.types";
 import { Mic } from "lucide-react";
+import { conversationManager } from "../src/lib/conversation-memory.ts";
+import { analyzeConversation } from "../../../packages/agent/conversation-engine.ts";
+import { isConversationalIntent} from "../../../packages/agent/intent-router";
+import { generateResponse } from "../../../packages/agent/response-generator.ts";
+import { needsWebSearch } from "../../../packages/agent/web-intent.ts";
+import { webIntelligence } from "../../../packages/agent/web-intelligence.ts";
 
 declare global {
   interface Window {
@@ -27,6 +33,162 @@ export default function App() {
   const [wakeMode, setWakeMode] = useState(false);
   const [micBusy, setMicBusy] = useState(false);
 
+interface SpeakOptions {
+  lang?: string;
+  rate?: number;
+  pitch?: number;
+  volume?: number;
+  voicePreference?: string;
+}
+
+  const speak = (text: string, options: SpeakOptions = {}): void => {
+    if (typeof window === "undefined" || !window.speechSynthesis) {
+      console.warn("Speech synthesis is not supported or available in this environment.");
+      return;
+    }
+
+    const {
+      lang = "en-US",
+      rate = 1,
+      pitch = 1,
+      volume = 1,
+      voicePreference = "female"
+    } = options;
+
+    try {
+      // Cancel any ongoing speech queue immediately
+      window.speechSynthesis.cancel();
+
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = lang;
+      utterance.rate = Math.max(0.1, Math.min(10, rate)); // Clamp to safe API bounds
+      utterance.pitch = Math.max(0, Math.min(2, pitch));
+      utterance.volume = Math.max(0, Math.min(1, volume));
+
+      // Handle voice selection asynchronously if required by browser loading quirks
+      const voices = window.speechSynthesis.getVoices();
+      const preferredVoice = voices.find((voice) =>
+        voice.name.toLowerCase().includes(voicePreference.toLowerCase())
+      );
+
+      if (preferredVoice) {
+        utterance.voice = preferredVoice;
+      }
+
+      window.speechSynthesis.speak(utterance);
+    } catch (error) {
+      console.error("An error occurred during speech synthesis:", error);
+    }
+  };
+
+  const handleConversation = async (transcript: string)=>{
+    try {
+       console.log("USER:",transcript);
+      conversationManager.addMessage("user",transcript);
+      const currentState = conversationManager.getState();
+      console.log("CURRENT MEMORY:",currentState);
+      const hasActiveConversation = currentState.activeIntent && currentState.missingFields.length > 0;
+
+      if (hasActiveConversation){
+        console.log("CONTINUING EXISTING CONVERSATION");
+        const currentField = currentState.missingFields[0];
+   
+        conversationManager.updateEntity(
+            currentField,    
+            transcript
+        );
+      
+        const updatedMissingFields = currentState.missingFields.slice(1);
+        conversationManager.setMissingFields(updatedMissingFields);
+       if (updatedMissingFields.length > 0){
+          const nextField = updatedMissingFields[0];
+          const nextQuestion = `What is your preferred ${nextField}?`;
+          conversationManager.setNextQuestion(nextQuestion);
+          speak(nextQuestion);
+      
+          return;
+        }
+      
+        const aiResponse = await generateResponse(conversationManager.getState());
+        console.log("AI RESPONSE:",aiResponse);
+        speak(aiResponse);
+
+        console.log("FINAL MEMORY:",conversationManager.getState());
+
+        return;
+      }
+
+      const result = await analyzeConversation(
+        transcript,
+        currentState
+      );
+
+      console.log("CONVERSATION RESULT:",result);
+
+      conversationManager.setIntent(result.intent);
+      conversationManager.setMissingFields(result.missing_fields);
+      conversationManager.setNextQuestion(result.next_question);
+
+      Object.entries(result.entities)
+
+      .forEach(([key, value]) => {
+          conversationManager.updateEntity(key,value);
+      }
+    );
+      console.log("UPDATED MEMORY:",conversationManager.getState());
+
+      if (result.next_question){
+        conversationManager.addMessage("assistant",result.next_question);
+        speak(result.next_question);
+
+        return;
+      }
+
+      if (needsWebSearch(transcript)){
+        console.log("WEB SEARCH DETECTED");
+        const webResponse = await webIntelligence(transcript);
+        console.log("WEB RESPONSE:",webResponse);
+        speak(webResponse);
+      
+        return;
+      }
+
+      if (isConversationalIntent(result.intent)){
+        const aiResponse = await generateResponse(conversationManager.getState());
+        console.log("AI RESPONSE:",aiResponse);
+
+        speak(aiResponse);
+        console.log("CONVERSATION COMPLETE:",conversationManager.getState());
+      
+        return;
+      }
+      
+      console.log("EXECUTABLE INTENT DETECTED");
+      const response = await axios.post("http://localhost:3000/agent/plan",
+        {
+          command:transcript
+        }
+      );
+      console.log("PLANNED TASK:",response.data);
+      setPlannedTask(response.data);
+
+      const executionResponse = await axios.post(
+        "http://localhost:3000/agent/execute",
+        response.data
+      );
+
+      console.log("EXECUTION RESULT:",executionResponse.data);
+
+      setExecutionResult(executionResponse.data);
+      speak(
+      "Task completed successfully"
+      );
+    }catch(error){
+      console.error("CONVERSATION ERROR:",error);
+      speak("Sorry, something went wrong.");
+    }
+  };
+
   const startVoiceRecognition = () => {
     setMicBusy(true);
     speechSynthesis.cancel();
@@ -46,68 +208,78 @@ export default function App() {
       setIsListening(true);
     };
   
+    
     recognition.onresult = async (event: any) => {
-      let transcript = event.results[0][0].transcript;
-      
-      // Voice normalization
-      transcript = transcript
-        .replace(/\bat the rate\b/gi, "@")
-        .replace(/\battherate\b/gi, "@")
-        .replace(/\bdot\b/gi, ".")
-        .replace(/\bunderscore\b/gi, "_")
-        .replace(/\bdash\b/gi, "-")
-        .replace(/\bhyphen\b/gi, "-")
-        .replace(/\s*@\s*/g, "@")
-        .replace(/\s*\.\s*/g, ".")
-        .replace(/\s+(?=\d+@)/g, "")
-        .trim();
+        let transcript = event.results[0][0].transcript;
+        transcript = transcript
+          .replace(
+            /\bat the rate\b/gi,
+            "@"
+          )
+          .replace(
+            /\battherate\b/gi,
+            "@"
+          )
+          .replace(
+            /\bdot\b/gi,
+            "."
+          )
+          .replace(
+            /\bunderscore\b/gi,
+            "_"
+          )
+          .replace(
+            /\bdash\b/gi,
+            "-"
+          )
+          .replace(
+            /\bhyphen\b/gi,
+            "-"
+          )
+          .replace(
+            /\s*@\s*/g,
+            "@"
+          )
+          .replace(
+            /\s*\.\s*/g,
+            "."
+          )
+          .replace(
+            /\s+(?=\d+@)/g,
+            ""
+          )
+          .trim();
 
-      if (transcript.includes("@")) {
-        transcript = transcript.toLowerCase();
-      }
+        if (transcript.includes("@")){
+          transcript = transcript.toLowerCase();
+        }
+        console.log("VOICE INPUT:",transcript);
 
-      setCommand(transcript);
-        
-      try {
-        const response = await axios.post("http://localhost:3000/agent/plan", {
-          command: transcript,
-        });
-  
-        setPlannedTask(response.data);
-  
-        const executionResponse = await axios.post(
-          "http://localhost:3000/agent/execute",
-          response.data
+        setCommand(
+          transcript
         );
-  
-        setExecutionResult(executionResponse.data);
-  
-        const utterance = new SpeechSynthesisUtterance("Task completed successfully");
-        speechSynthesis.speak(utterance);
-        loadExecutions();
-      } catch (error) {
-        console.error(error);
-        const utterance = new SpeechSynthesisUtterance("Task failed");
-        speechSynthesis.speak(utterance);
-      }
-    };
-  
-    recognition.onerror = (event: any) => {
-      console.error("VOICE ERROR:", event);
-      setIsListening(false);
-    };
-  
-    recognition.onend = () => {
-      console.log("VOICE STOPPED");
-      setIsListening(false);
-      setMicBusy(false);
-      setTimeout(() => {
-        startWakeWordDetection();
-      }, 2000);
+
+        await handleConversation(
+          transcript
+        );
     };
 
-    recognition.start();
-  };
+      recognition.onerror = (event: any) => {
+        console.error("VOICE ERROR:", event);
+        setIsListening(false);
+      };
+    
+      recognition.onend = () => {
+        console.log("VOICE STOPPED");
+        setIsListening(false);
+        setMicBusy(false);
+        setTimeout(() => {
+          startWakeWordDetection();
+        }, 2000);
+      };
+
+      recognition.start();
+    };
   
   const startWakeWordDetection = () => {
     if (micBusy || wakeMode || isListening) return;
@@ -132,7 +304,7 @@ export default function App() {
     recognition.onresult = (event: any) => {
       const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase();
       
-      if (transcript.includes("hey siri") || transcript.includes("hey shree")) {
+      if (transcript.includes("hey pappu") || transcript.includes("pappu")) {
         console.log("WAKE WORD DETECTED");
         setMicBusy(true);
         recognition.stop();
@@ -197,6 +369,10 @@ export default function App() {
     loadDLQEvents();
     loadExecutions();
     loadWorkflows();
+
+    speak(
+      "Hello. Pappu here."
+    );
   
     const timeout = setTimeout(() => {
       startWakeWordDetection();
